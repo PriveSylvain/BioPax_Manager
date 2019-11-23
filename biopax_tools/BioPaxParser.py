@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-import re
 import os
 import xml.etree.ElementTree as ET
 from biopax_tools.Objects.Classes import BioPax
@@ -13,6 +11,7 @@ from biopax_tools.Objects.Classes import Complex
 from biopax_tools.Objects.Classes import Control
 from biopax_tools.Objects.Classes import SmallMolecule
 from biopax_tools.Objects.Classes import BiochemicalReaction
+from biopax_tools.Objects.Classes import Stoichiometry
 
 
 class Parser(object) :
@@ -41,21 +40,23 @@ class Parser(object) :
         self.addSmallMolecules(bioPax,root,ns)
         self.addComplexes(bioPax,root,ns)
         self.addCatalysis(bioPax,root,ns)
-        self.addControl(bioPax,root,ns)
+        self.addControls(bioPax,root,ns)
+        self.addStoichiometries(bioPax,root,ns)
+
     def addPathways(self,bioPax,root,ns) :
         pathways = root.findall('bp:Pathway',ns)
 
         for pw in pathways :
 
             rdfID = pw.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
-            pathwayComponents = pw.findall('bp:pathwayComponent')
-            organism = pw.find('bp:organism')
-            name = pw.find('bp:name')
-            displayName = pw.find('bp:displayName')
-            comment = pw.findall('bp:comment')
-            xref = pw.findall('bp:xref')
-            dataSource = pw.find('bp:dataSource')
-            pathwaySteps = pw.findall('bp:pathwaySteps')
+            pathwayComponents = pw.findall('bp:pathwayComponent',ns)
+            organism = pw.find('bp:organism',ns)
+            name = pw.findall('bp:name',ns)
+            displayName = pw.find('bp:displayName',ns)
+            comment = pw.findall('bp:comment',ns)
+            xref = pw.findall('bp:xref',ns)
+            dataSource = pw.find('bp:dataSource',ns)
+            pathwaySteps = pw.findall('bp:pathwaySteps',ns)
             
             newPathway = Pathway(rdfID, pathwayComponents, pathwaySteps, organism, name, displayName, comment, xref,dataSource)
             bioPax.addPathway(newPathway)
@@ -64,13 +65,13 @@ class Parser(object) :
 
         for bioch in BiochemicalReactions :
             rdfID = bioch.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
-            conversionDirection = bioch.find("bp:datatype")
-            left = bioch.find("bp:left")
-            right = bioch.find("bp:right")
-            displayName = bioch.find("bp:displayName")
-            comment = bioch.findall("bp:comment")
-            xref = bioch.findall("bp:xref")
-            dataSource = bioch.find("bp:dataSource")
+            conversionDirection = bioch.find("bp:conversionDirection",ns)
+            left = bioch.findall("bp:left",ns)
+            right = bioch.findall("bp:right",ns)
+            displayName = bioch.find("bp:displayName",ns)
+            comment = bioch.findall("bp:comment",ns)
+            xref = bioch.findall("bp:xref",ns)
+            dataSource = bioch.find("bp:dataSource",ns)
 
             newBiochemicalReaction = BiochemicalReaction(rdfID,conversionDirection,left,right,displayName,comment,xref,dataSource)
             bioPax.addBiochemicalReaction(newBiochemicalReaction)
@@ -79,15 +80,15 @@ class Parser(object) :
 
         for protein in proteins :
             rdfID = protein.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
-            cellularLocation = protein.find('bp:cellularLocation')
-            displayName = protein.find("bp:displayName")
-            comment = protein.findall("bp:comment")
-            xref = protein.findall("bp:xref")
-            dataSource = protein.find("bp:dataSource")
-            entityReference = protein.find("bp:entityReference")
-            feature = protein.findall("bp:feature")
-            name = protein.findall("bp:name")
-            memberPhysicalEntities = protein.findall("bp:memberPhysicalEntities")
+            cellularLocation = protein.find('bp:cellularLocation',ns)
+            displayName = protein.find("bp:displayName",ns)
+            comment = protein.findall("bp:comment",ns)
+            xref = protein.findall("bp:xref",ns)
+            dataSource = protein.find("bp:dataSource",ns)
+            entityReference = protein.find("bp:entityReference",ns)
+            feature = protein.findall("bp:feature",ns)
+            name = protein.findall("bp:name",ns)
+            memberPhysicalEntities = protein.findall("bp:memberPhysicalEntities",ns)
 
             newProtein = Protein(rdfID,cellularLocation,displayName,comment,xref,dataSource,entityReference,feature,name,memberPhysicalEntities)
             bioPax.addProtein(newProtein)
@@ -96,13 +97,13 @@ class Parser(object) :
 
         for smallMolecule in smallMolecules :
             rdfID = smallMolecule.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
-            entityReference = smallMolecule.find("bp:entityReference")
-            name = smallMolecule.findall("bp:name")
-            cellularLocation = smallMolecule.find("bp:cellularLocation")
-            displayName = smallMolecule.find("bp:displayName")
-            comment = smallMolecule.findall("bp:comment")
-            xref = smallMolecule.findall("bp:xref")
-            dataSource = smallMolecule.find("bp:dataSource")
+            entityReference = smallMolecule.find("bp:entityReference",ns)
+            name = smallMolecule.findall("bp:name",ns)
+            cellularLocation = smallMolecule.find("bp:cellularLocation",ns)
+            displayName = smallMolecule.find("bp:displayName",ns)
+            comment = smallMolecule.findall("bp:comment",ns)
+            xref = smallMolecule.findall("bp:xref",ns)
+            dataSource = smallMolecule.find("bp:dataSource",ns)
 
             newSmallMolecule = SmallMolecule(rdfID,entityReference,name,cellularLocation,displayName,comment,xref,dataSource)
             biopax.addSmallMolecule(newSmallMolecule)
@@ -123,15 +124,37 @@ class Parser(object) :
             newComplex = Complex(rdfID,name,cellularLocation,displayName,comment,xref,dataSource,memberPhysicalEntities,componentStoichiometries,components)
             bioPax.addComplex(newComplex)
     def addCatalysis(self,bioPax,root,ns):
-        pass
-    def addControl(self,bioPax,root,ns):
-        
-            rdfID
-            controller
-            controlled
-            controlType
-            xref
-            dataSource
+        catalysis = root.findall('bp:Catalysis',ns)
 
+        for control in catalysis :
+            rdfID = control.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            controller = control.find("bp:controller",ns)
+            controlled = control.find("bp:controlled",ns)
+            controlType = control.find("bp:controlType",ns)
+            xref = control.findall("bp:xref",ns)
+            dataSource = control.find("bp:dataSource",ns)
 
+            newCatalysis = Catalysis(rdfID, controller, controlled, controlType, xref, dataSource)
+            bioPax.addCatalysis(newCatalysis)
+    def addControls(self,bioPax,root,ns):
+        controls = root.findall('bp:Control',ns)
 
+        for control in controls :
+            rdfID = control.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            controller = control.find("bp:controller",ns)
+            controlled = control.find("bp:controlled",ns)
+            controlType = control.find("bp:controlType",ns)
+            xref = control.findall("bp:xref",ns)
+            dataSource = control.find("bp:dataSource",ns)
+
+            newControl = Control(rdfID, controller, controlled, controlType, xref, dataSource)
+            bioPax.addControl(newControl)
+    def addStoichiometries(self,biopax,root,ns) :
+        stoichiometries = root.findall("bp:Stoichiometry",ns)
+        for stoichiometry in stoichiometries :
+            rdfID = stoichiometry.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            stoichiometricCoefficient = stoichiometry.find("bp:stoichiometricCoefficient",ns)
+            physicalEntity = stoichiometry.find("bp:physicalEntity",ns)
+
+            newStoichiometry = Stoichiometry(rdfID, stoichiometricCoefficient, physicalEntity)
+            biopax.addStoichiometry(newStoichiometry)

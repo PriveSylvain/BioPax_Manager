@@ -19,7 +19,7 @@ class BioPax(object) :
         self.SequenceSiteCollection = {}
         self.FragmentFeatureCollection = {}
         self.ModificationFeatureCollection = {}
-
+        
     def addPathway(self,pathway) :
         if not pathway.rdfID in self.PathwayCollection :
             self.PathwayCollection[pathway.rdfID] = pathway
@@ -54,15 +54,44 @@ class BioPax(object) :
         if not biochemicalReaction.rdfID in self.BiochemicalReactionCollection :
             self.BiochemicalReactionCollection[biochemicalReaction.rdfID] = biochemicalReaction
         else :
-            print("gestion d'erreur biochemicalReaction")      
-    
+            print("gestion d'erreur biochemicalReaction")  
+    def addStoichiometry(self,stoichiometry):
+        if not stoichiometry.rdfID in self.StoichiometryCollection :
+            self.StoichiometryCollection[stoichiometry.rdfID] = stoichiometry
+        else :
+            print("gestion d'erreur stoichiometry")
 class Tag(object) :
     def __init__(self,rdfID,displayName,comment,xref,dataSource) :
         self.rdfID = rdfID
-        self.displayName = displayName
-        self.comment = comment
-        self.xref = xref
-        self.dataSource = dataSource
+        if displayName != "" :
+            self.displayName = displayName.text
+        else :
+            self.displayName = ""
+        self.xref = []
+        for ref in xref :
+            self.xref.append(ref.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))
+        self.comment = []
+        for com in comment :
+            self.comment.append(com.text)
+        self.dataSource = dataSource.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#")
+    def __repr__(self):
+        comment = """COMMENT : """
+        for com in self.comment :
+            comment = comment+com+"\n"
+
+        xref = """XREF : \n"""
+        for ref in self.xref :
+            xref = xref+"\t\t"+ref+"\n"
+
+        s = str("""
+        ##########################################################
+        # %s : %s
+        ##########################################################
+
+        %s
+        %s
+        DATASOURCE : %s\n"""%(self.rdfID,self.displayName,comment,xref,self.dataSource))
+        return s
 class UnificationXref(object) :
     def __init__(self,rdfID,bd,ID,comment):
         self.rdfID = rdfID
@@ -72,16 +101,38 @@ class UnificationXref(object) :
         self.comment = comment
 class Entity(Tag) :
     def __init__(self,rdfID,name,cellularLocation,displayName,comment,xref,dataSource) :
-        self.cellularLocation = cellularLocation        
-        self.name = name
+        if cellularLocation != "" :
+            self.cellularLocation = cellularLocation.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#") 
+        else :
+            self.cellularLocation = cellularLocation
+        self.name = []
+        if name != [] :
+            for n in name :
+                self.name.append(n.text)
         Tag.__init__(self,rdfID,displayName,comment,xref,dataSource)
+
+    def __repr__(self) :
+        s = Tag.__repr__(self)
+        
+        name  = """NAME : """
+        for elem in self.name :
+            name = name+elem+"\n"
+
+        s=s+"""
+        %s
+        CELLULAR_LOCATION : %s
+        ##########################################################
+        ##########################################################
+        """%(name,self.cellularLocation)
+        return s
+
 class SmallMolecule(Entity):
     def __init__(self,rdfID,entityReference,name,cellularLocation,displayName,comment,xref,dataSource):
         self.entityReference = entityReference
         Entity.__init__(self,rdfID,name,cellularLocation,displayName,comment,xref,dataSource)
 class Protein(Entity):
-    def __init__(self,rdfID,cellularLocation,displayName,comment,xref,dataSource,entityReference=None,feature=None, name=None,memberPhysicalEntities = None) :
-        if memberPhysicalEntities != None :
+    def __init__(self,rdfID,cellularLocation,displayName,comment,xref,dataSource,entityReference=None,feature=[], name=[],memberPhysicalEntities = []) :
+        if memberPhysicalEntities != [] :
             self.memberPhysicalEntities = []
             for member in memberPhysicalEntities :
                 self.memberPhysicalEntities.append(member) 
@@ -92,16 +143,20 @@ class Protein(Entity):
 class Complex(Entity):
     def __init__(self,rdfID,name,cellularLocation,displayName,comment,xref,dataSource,memberPhysicalEntities,componentStoichiometries,components):
         Entity.__init__(self,rdfID,name,cellularLocation,displayName,comment,xref,dataSource)
-        if memberPhysicalEntities != None :
+        if memberPhysicalEntities != [] :
             self.memberPhysicalEntities = []
             for member in memberPhysicalEntities :
                 self.memberPhysicalEntities.append(member)
         else :
-            self.componentStoichiometries = componentStoichiometries
-            self.components = components
+            self.componentStoichiometries = []
+            self.components = []
+            for component in componentStoichiometries :
+                self.componentStoichiometries.append(component.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))
+            for component in components :
+                self.components.append(component.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))
 class Pathway(Entity):
     def __init__(self,rdfID,pathwayComponents,pathwaySteps,organism,name,displayName,comment,xref,dataSource) :
-        cellularLocation=None
+        cellularLocation=""
         self.organism = organism
 
         Entity.__init__(self,rdfID,name,cellularLocation,displayName,comment,xref,dataSource)
@@ -113,25 +168,49 @@ class PathwayStep(object) :
         self.stepProcess = stepProcess
         self.nextStep = nextStep
 class BiochemicalReaction(Tag):
-     def __init__(self,rdfID,conversionDirection,left,right,displayName,comment,xref,dataSource) :
-        self.conversionDirection = conversionDirection
-        self.left = left
-        self.right = right
+    def __init__(self,rdfID,conversionDirection,left,right,displayName,comment,xref,dataSource) :
+        self.conversionDirection = conversionDirection.text
+        self.left = []
+        self.right = []
+        for element in left :
+            self.left.append(element.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))
+            
+        for element in right :
+            self.right.append(element.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))
         Tag.__init__(self,rdfID,displayName,comment,xref,dataSource)
         #eCNumber
+    def __repr__(self) :
+        s = Tag.__repr__(self)
+        
+        left  = """LEFT : """
+        for elem in self.left :
+            left = left+elem+"\n"
+
+        right  = """RIGHT : """
+        for elem in self.right :
+            right = right+elem+"\n"
+
+        s=s+"""
+        %s
+        %s
+        DIRECTION : %s
+        ##########################################################
+        ##########################################################
+        """%(left,right,self.conversionDirection)
+        return s
+                
+
 class Control(Tag) :
     def __init__(self,rdfID,controller,controlled,controlType,xref,dataSource):
-        self.controller = controller
-        self.controlled = controlled
+        self.controller = controller.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#")
+        self.controlled = controlled.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#")
         self.controlType = controlType
-        displayName = None
-        comment = None
+        displayName = ""
+        comment = []
         Tag.__init__(self,rdfID,displayName,comment,xref,dataSource)
 class Catalysis(Control) :
     def __init__(self,rdfID,controller,controlled,controlType,xref,dataSource) :
-        super.__init__()
-
-
+        Control.__init__(self,rdfID,controller,controlled,controlType,xref,dataSource)
 class Stoichiometry(object) :
     def __init__(self,rdfID,stoichiometricCoefficient,physicalEntity) :
         self.rdfID = rdfID
@@ -155,5 +234,5 @@ class FragmentFeature(object):
         self.featureLocation = localisation
 class ModificationFeature(FragmentFeature):
     def __init__(self,rdfID,localisation,modificationType) :
-        super().__init__()
+        FragmentFeature.__init__(self,rdfID,localisation)
         self.modificationType = modificationType
