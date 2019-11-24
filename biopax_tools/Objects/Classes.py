@@ -4,8 +4,8 @@ import os
 import sys
 
 class BioPax(object) :
-    def __init__(self):
-        
+    def __init__(self,fileName = ""):
+        self.fileName = fileName
         self.PathwayCollection = {}
         self.PathwayStepCollection = {}
         self.ProteinCollection = {}
@@ -88,7 +88,6 @@ class Tag(object) :
             self.displayName = displayName.text
         else :
             self.displayName = displayName
-            print(self.rdfID)
         self.xref = []
         for ref in xref :
             self.xref.append(ref.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))

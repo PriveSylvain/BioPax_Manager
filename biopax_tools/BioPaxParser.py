@@ -3,6 +3,7 @@
 
 import os
 import xml.etree.ElementTree as ET
+from biopax_tools.bioPaxFormalizer import ToString
 from biopax_tools.Objects.Classes import BioPax
 from biopax_tools.Objects.Classes import Pathway
 from biopax_tools.Objects.Classes import PathwayStep
@@ -20,9 +21,9 @@ from biopax_tools.Objects.Classes import SequenceSite
 
 
 class Parser(object) :
-    def parse(self,xmlFilePath) :
-        
-        bioPax = BioPax()
+    def parse(self,xmlFilePath,verbose) :
+        fileName = os.path.split(xmlFilePath)[-1]
+        bioPax = BioPax(fileName = fileName)
 
         tree = ET.parse(xmlFilePath)
         root = tree.getroot()
@@ -35,25 +36,25 @@ class Parser(object) :
             "xsd" : "http://www.w3.org/2001/XMLSchema#",
             "base" : "http://www.reactome.org/biopax/70/177929#",
         }
-        self.process(bioPax,root,ns)
+        self.process(bioPax,root,ns,verbose)
         return bioPax
         
-    def process(self,bioPax,root,ns) :
-        self.addPathways(bioPax,root,ns)
-        self.addPathwaySteps(bioPax,root,ns)
-        self.addBiochemicalReactions(bioPax,root,ns)        
-        self.addProteins(bioPax,root,ns)
-        self.addSmallMolecules(bioPax,root,ns)
-        self.addComplexes(bioPax,root,ns)
-        self.addCatalysis(bioPax,root,ns)
-        self.addControls(bioPax,root,ns)
-        self.addStoichiometries(bioPax,root,ns)
-        self.addFragmentFeatures(bioPax,root,ns)
-        self.addSequenceIntervals(bioPax,root,ns)
-        self.addModificationFeatures(bioPax,root,ns)
-        self.addSequenceSites(bioPax,root,ns)
+    def process(self,bioPax,root,ns,verbose=False) :
+        self.addPathways(bioPax,root,ns,verbose)
+        self.addPathwaySteps(bioPax,root,ns,verbose)
+        self.addBiochemicalReactions(bioPax,root,ns,verbose)        
+        self.addProteins(bioPax,root,ns,verbose)
+        self.addSmallMolecules(bioPax,root,ns,verbose)
+        self.addComplexes(bioPax,root,ns,verbose)
+        self.addCatalysis(bioPax,root,ns,verbose)
+        self.addControls(bioPax,root,ns,verbose)
+        self.addStoichiometries(bioPax,root,ns,verbose)
+        self.addFragmentFeatures(bioPax,root,ns,verbose)
+        self.addSequenceIntervals(bioPax,root,ns,verbose)
+        self.addModificationFeatures(bioPax,root,ns,verbose)
+        self.addSequenceSites(bioPax,root,ns,verbose)
     
-    def addPathways(self,bioPax,root,ns) :
+    def addPathways(self,bioPax,root,ns,verbose=False) :
         pathways = root.findall('bp:Pathway',ns)
 
         for pw in pathways :
@@ -71,20 +72,25 @@ class Parser(object) :
             comment = pw.findall('bp:comment',ns)
             xref = pw.findall('bp:xref',ns)
             dataSource = pw.find('bp:dataSource',ns)
-            pathwaySteps = pw.findall('bp:pathwaySteps',ns)
+            pathwaySteps = pw.findall('bp:pathwayOrder',ns)
             
             newPathway = Pathway(rdfID, pathwayComponents, pathwaySteps, organism, name, displayName, comment, xref,dataSource)
             bioPax.addPathway(newPathway)
-    def addPathwaySteps(self,bioPax,root,ns) :
-        pathwaySteps = root.findall("bp:PathwaySteps",ns)
+            if verbose :
+                print(ToString(newPathway))
+            
+    def addPathwaySteps(self,bioPax,root,ns,verbose=False) :
+        pathwaySteps = root.findall("bp:PathwayStep",ns)
         for pathwayStep in pathwaySteps :
             rdfID = pathwayStep.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
             stepProcess = pathwayStep.findall("bp:stepProcess",ns) #Pathway / BiochemicalReaction / Catalysis / Control
             nextSteps = pathwayStep.findall("bp:nextStep",ns) #PathwayStep
 
             newPathwayStep = PathwayStep(rdfID,stepProcess,nextSteps)
-            bioPax.addPathwaySteps(newPathwayStep)
-    def addBiochemicalReactions(self,bioPax,root,ns) :
+            bioPax.addPathwayStep(newPathwayStep)
+            if verbose :
+                print(ToString(newPathwayStep))
+    def addBiochemicalReactions(self,bioPax,root,ns,verbose=False) :
         BiochemicalReactions = root.findall('bp:BiochemicalReaction',ns)
 
         for bioch in BiochemicalReactions :
@@ -99,7 +105,9 @@ class Parser(object) :
 
             newBiochemicalReaction = BiochemicalReaction(rdfID,conversionDirection,left,right,displayName,comment,xref,dataSource)
             bioPax.addBiochemicalReaction(newBiochemicalReaction)
-    def addProteins(self,bioPax,root,ns) :
+            if verbose :
+                print(ToString(newBiochemicalReaction))
+    def addProteins(self,bioPax,root,ns,verbose=False) :
         proteins = root.findall('bp:Protein',ns)
 
         for protein in proteins :
@@ -116,7 +124,9 @@ class Parser(object) :
 
             newProtein = Protein(rdfID,cellularLocation,displayName,comment,xref,dataSource,entityReference,feature,name,memberPhysicalEntities)
             bioPax.addProtein(newProtein)
-    def addSmallMolecules(self,bioPax,root,ns) :
+            if verbose :
+                print(ToString(newProtein))
+    def addSmallMolecules(self,bioPax,root,ns,verbose=False) :
         smallMolecules = root.findall('bp:SmallMolecule',ns)
 
         for smallMolecule in smallMolecules :
@@ -131,7 +141,9 @@ class Parser(object) :
 
             newSmallMolecule = SmallMolecule(rdfID,entityReference,name,cellularLocation,displayName,comment,xref,dataSource)
             bioPax.addSmallMolecule(newSmallMolecule)
-    def addComplexes(self,bioPax,root,ns):
+            if verbose :
+                print(ToString(newSmallMolecule))
+    def addComplexes(self,bioPax,root,ns,verbose=False) :
         complexes = root.findall('bp:Complex',ns)
         for cplx in complexes :
             rdfID = cplx.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
@@ -147,7 +159,9 @@ class Parser(object) :
 
             newComplex = Complex(rdfID,name,cellularLocation,displayName,comment,xref,dataSource,memberPhysicalEntities,componentStoichiometries,components)
             bioPax.addComplex(newComplex)
-    def addCatalysis(self,bioPax,root,ns):
+            if verbose :
+                print(ToString(newComplex))
+    def addCatalysis(self,bioPax,root,ns,verbose=False) :
         catalysis = root.findall('bp:Catalysis',ns)
 
         for control in catalysis :
@@ -160,7 +174,9 @@ class Parser(object) :
 
             newCatalysis = Catalysis(rdfID, controller, controlled, controlType, xref, dataSource)
             bioPax.addCatalysis(newCatalysis)
-    def addControls(self,bioPax,root,ns):
+            if verbose :
+                print(ToString(newCatalysis))
+    def addControls(self,bioPax,root,ns,verbose=False) :
         controls = root.findall('bp:Control',ns)
 
         for control in controls :
@@ -173,7 +189,9 @@ class Parser(object) :
 
             newControl = Control(rdfID, controller, controlled, controlType, xref, dataSource)
             bioPax.addControl(newControl)
-    def addStoichiometries(self,bioPax,root,ns) :
+            if verbose :
+                print(ToString(newControl))
+    def addStoichiometries(self,bioPax,root,ns,verbose=False) :
         stoichiometries = root.findall("bp:Stoichiometry",ns)
         for stoichiometry in stoichiometries :
             rdfID = stoichiometry.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
@@ -182,7 +200,9 @@ class Parser(object) :
 
             newStoichiometry = Stoichiometry(rdfID, stoichiometricCoefficient, physicalEntity)
             bioPax.addStoichiometry(newStoichiometry)
-    def addFragmentFeatures(self,bioPax,root,ns) :
+            if verbose :
+                print(ToString(newStoichiometry))
+    def addFragmentFeatures(self,bioPax,root,ns,verbose=False) :
         features = root.findall("bp:FragmentFeature",ns)
         for feature in features :
             rdfID = feature.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
@@ -190,7 +210,9 @@ class Parser(object) :
 
             newFeature = FragmentFeature(rdfID,featureLocation)
             bioPax.addFragmentFeature(newFeature)
-    def addModificationFeatures(self,bioPax,root,ns) :
+            if verbose :
+                print(ToString(newFeature))
+    def addModificationFeatures(self,bioPax,root,ns,verbose=False) :
         """ Considered as FragmentFeatures """
         modificationFeatures = root.findall("bp:ModificationFeature",ns)
         for modification in modificationFeatures :
@@ -202,7 +224,9 @@ class Parser(object) :
 
             newFeature = FragmentFeature(rdfID,featureLocation)
             bioPax.addFragmentFeature(newFeature)
-    def addSequenceIntervals(self,bioPax,root,ns) :
+            if verbose :
+                print(ToString(newFeature))
+    def addSequenceIntervals(self,bioPax,root,ns,verbose=False) :
         intervals = root.findall("bp:SequenceInterval",ns)
         for sequenceInterval in intervals :
             rdfID = sequenceInterval.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
@@ -212,7 +236,9 @@ class Parser(object) :
 
             newSequenceInterval = SequenceInterval(rdfID, sequenceIntervalBegin, sequenceIntervalEnd)
             bioPax.addSequenceInterval(newSequenceInterval)
-    def addSequenceSites(self,bioPax,root,ns) :
+            if verbose :
+                print(ToString(newSequenceInterval))
+    def addSequenceSites(self,bioPax,root,ns,verbose=False) :
         sequenceSites = root.findall("bp:SequenceSite",ns)
         
         for sequenceSite in sequenceSites :
@@ -222,5 +248,7 @@ class Parser(object) :
 
             newSequenceSite = SequenceSite(rdfID,sequencePosition,positionStatus)
             bioPax.addSequenceSite(newSequenceSite)
+            if verbose :
+                print(ToString(newSequenceSite))
     
 
