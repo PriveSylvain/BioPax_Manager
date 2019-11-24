@@ -1,30 +1,35 @@
 #!usr/bin/env python3.6
-import json
+
 import os
 import sys
 
 class BioPax(object) :
     def __init__(self):
-        self.ProteinCollection = {}
-        self.UnificationXrefCollection = {}
-        self.SmallMoleculeCollection = {}
-        self.ComplexCollection = {}
+        
         self.PathwayCollection = {}
         self.PathwayStepCollection = {}
+        self.ProteinCollection = {}
+        self.UnificationXrefCollection = {}
+        self.ComplexCollection = {}
+        self.SmallMoleculeCollection = {}
         self.BiochemicalReactionCollection = {}
         self.ControlCollection = {}
         self.CatalysisCollection = {}
-        self.StoichiometryCollection = {}
+        self.StoichiometryCollection = {}        
+        self.FragmentFeatureCollection = {}
         self.SequenceIntervalCollection = {}
         self.SequenceSiteCollection = {}
-        self.FragmentFeatureCollection = {}
-        self.ModificationFeatureCollection = {}
         
     def addPathway(self,pathway) :
         if not pathway.rdfID in self.PathwayCollection :
             self.PathwayCollection[pathway.rdfID] = pathway
         else :
             print("gestion d'erreur pathway")
+    def addPathwayStep(self,pathwayStep) :
+        if not pathwayStep in self.PathwayStepCollection :
+            self.PathwayStepCollection[pathwayStep.rdfID] = pathwayStep
+        else :
+            print("gestion d'erreur pathwaystep ")
     def addProtein(self,protein) :
         if not protein.rdfID in self.ProteinCollection :
             self.ProteinCollection[protein.rdfID] = protein
@@ -60,13 +65,30 @@ class BioPax(object) :
             self.StoichiometryCollection[stoichiometry.rdfID] = stoichiometry
         else :
             print("gestion d'erreur stoichiometry")
+    def addFragmentFeature(self,fragmentFeature) :
+        if not fragmentFeature.rdfID in self.FragmentFeatureCollection :
+            self.FragmentFeatureCollection[fragmentFeature.rdfID] = fragmentFeature
+        else :
+            print("gestion d'erreur fragmentFeature")
+    def addSequenceInterval(self,sequenceInterval) :
+        if not sequenceInterval in self.SequenceIntervalCollection :
+            self.SequenceIntervalCollection[sequenceInterval.rdfID] = sequenceInterval
+        else :
+            print("gestion d'erreur sequenceInterval")
+    def addSequenceSite(self,sequenceSite) :
+        if not sequenceSite in self.SequenceSiteCollection :
+            self.SequenceSiteCollection[sequenceSite.rdfID] = sequenceSite
+        else :
+            print("gestion d'erreur sequenceSite")
+    
 class Tag(object) :
     def __init__(self,rdfID,displayName,comment,xref,dataSource) :
         self.rdfID = rdfID
-        if displayName != "" :
+        if hasattr(displayName,'text') :
             self.displayName = displayName.text
         else :
-            self.displayName = ""
+            self.displayName = displayName
+            print(self.rdfID)
         self.xref = []
         for ref in xref :
             self.xref.append(ref.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))
@@ -110,21 +132,6 @@ class Entity(Tag) :
             for n in name :
                 self.name.append(n.text)
         Tag.__init__(self,rdfID,displayName,comment,xref,dataSource)
-
-    def __repr__(self) :
-        s = Tag.__repr__(self)
-        
-        name  = """NAME : """
-        for elem in self.name :
-            name = name+elem+"\n"
-
-        s=s+"""
-        %s
-        CELLULAR_LOCATION : %s
-        ##########################################################
-        ##########################################################
-        """%(name,self.cellularLocation)
-        return s
 
 class SmallMolecule(Entity):
     def __init__(self,rdfID,entityReference,name,cellularLocation,displayName,comment,xref,dataSource):
@@ -179,27 +186,6 @@ class BiochemicalReaction(Tag):
             self.right.append(element.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#"))
         Tag.__init__(self,rdfID,displayName,comment,xref,dataSource)
         #eCNumber
-    def __repr__(self) :
-        s = Tag.__repr__(self)
-        
-        left  = """LEFT : """
-        for elem in self.left :
-            left = left+elem+"\n"
-
-        right  = """RIGHT : """
-        for elem in self.right :
-            right = right+elem+"\n"
-
-        s=s+"""
-        %s
-        %s
-        DIRECTION : %s
-        ##########################################################
-        ##########################################################
-        """%(left,right,self.conversionDirection)
-        return s
-                
-
 class Control(Tag) :
     def __init__(self,rdfID,controller,controlled,controlType,xref,dataSource):
         self.controller = controller.get('{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource').strip("#")

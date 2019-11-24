@@ -5,6 +5,7 @@ import os
 import xml.etree.ElementTree as ET
 from biopax_tools.Objects.Classes import BioPax
 from biopax_tools.Objects.Classes import Pathway
+from biopax_tools.Objects.Classes import PathwayStep
 from biopax_tools.Objects.Classes import Protein
 from biopax_tools.Objects.Classes import Catalysis
 from biopax_tools.Objects.Classes import Complex
@@ -12,6 +13,10 @@ from biopax_tools.Objects.Classes import Control
 from biopax_tools.Objects.Classes import SmallMolecule
 from biopax_tools.Objects.Classes import BiochemicalReaction
 from biopax_tools.Objects.Classes import Stoichiometry
+from biopax_tools.Objects.Classes import FragmentFeature
+# from biopax_tools.Objects.Classes import ModificationFeature
+from biopax_tools.Objects.Classes import SequenceInterval
+from biopax_tools.Objects.Classes import SequenceSite
 
 
 class Parser(object) :
@@ -35,6 +40,7 @@ class Parser(object) :
         
     def process(self,bioPax,root,ns) :
         self.addPathways(bioPax,root,ns)
+        self.addPathwaySteps(bioPax,root,ns)
         self.addBiochemicalReactions(bioPax,root,ns)        
         self.addProteins(bioPax,root,ns)
         self.addSmallMolecules(bioPax,root,ns)
@@ -42,7 +48,11 @@ class Parser(object) :
         self.addCatalysis(bioPax,root,ns)
         self.addControls(bioPax,root,ns)
         self.addStoichiometries(bioPax,root,ns)
-
+        self.addFragmentFeatures(bioPax,root,ns)
+        self.addSequenceIntervals(bioPax,root,ns)
+        self.addModificationFeatures(bioPax,root,ns)
+        self.addSequenceSites(bioPax,root,ns)
+    
     def addPathways(self,bioPax,root,ns) :
         pathways = root.findall('bp:Pathway',ns)
 
@@ -50,9 +60,14 @@ class Parser(object) :
 
             rdfID = pw.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
             pathwayComponents = pw.findall('bp:pathwayComponent',ns)
-            organism = pw.find('bp:organism',ns)
+            organism = pw.find('bp:organism',ns).get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource")
+            
+            for biosource in root.findall("bp:BioSource",ns) :
+                if biosource.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID") in organism :
+                    organism = root.find("bp:BioSource",ns).find("bp:name",ns).text
+
             name = pw.findall('bp:name',ns)
-            displayName = pw.find('bp:displayName',ns)
+            displayName = pw.find('bp:displayName',ns).text
             comment = pw.findall('bp:comment',ns)
             xref = pw.findall('bp:xref',ns)
             dataSource = pw.find('bp:dataSource',ns)
@@ -60,6 +75,15 @@ class Parser(object) :
             
             newPathway = Pathway(rdfID, pathwayComponents, pathwaySteps, organism, name, displayName, comment, xref,dataSource)
             bioPax.addPathway(newPathway)
+    def addPathwaySteps(self,bioPax,root,ns) :
+        pathwaySteps = root.findall("bp:PathwaySteps",ns)
+        for pathwayStep in pathwaySteps :
+            rdfID = pathwayStep.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            stepProcess = pathwayStep.findall("bp:stepProcess",ns) #Pathway / BiochemicalReaction / Catalysis / Control
+            nextSteps = pathwayStep.findall("bp:nextStep",ns) #PathwayStep
+
+            newPathwayStep = PathwayStep(rdfID,stepProcess,nextSteps)
+            bioPax.addPathwaySteps(newPathwayStep)
     def addBiochemicalReactions(self,bioPax,root,ns) :
         BiochemicalReactions = root.findall('bp:BiochemicalReaction',ns)
 
@@ -92,7 +116,7 @@ class Parser(object) :
 
             newProtein = Protein(rdfID,cellularLocation,displayName,comment,xref,dataSource,entityReference,feature,name,memberPhysicalEntities)
             bioPax.addProtein(newProtein)
-    def addSmallMolecules(self,biopax,root,ns) :
+    def addSmallMolecules(self,bioPax,root,ns) :
         smallMolecules = root.findall('bp:SmallMolecule',ns)
 
         for smallMolecule in smallMolecules :
@@ -106,7 +130,7 @@ class Parser(object) :
             dataSource = smallMolecule.find("bp:dataSource",ns)
 
             newSmallMolecule = SmallMolecule(rdfID,entityReference,name,cellularLocation,displayName,comment,xref,dataSource)
-            biopax.addSmallMolecule(newSmallMolecule)
+            bioPax.addSmallMolecule(newSmallMolecule)
     def addComplexes(self,bioPax,root,ns):
         complexes = root.findall('bp:Complex',ns)
         for cplx in complexes :
@@ -149,7 +173,7 @@ class Parser(object) :
 
             newControl = Control(rdfID, controller, controlled, controlType, xref, dataSource)
             bioPax.addControl(newControl)
-    def addStoichiometries(self,biopax,root,ns) :
+    def addStoichiometries(self,bioPax,root,ns) :
         stoichiometries = root.findall("bp:Stoichiometry",ns)
         for stoichiometry in stoichiometries :
             rdfID = stoichiometry.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
@@ -157,4 +181,46 @@ class Parser(object) :
             physicalEntity = stoichiometry.find("bp:physicalEntity",ns)
 
             newStoichiometry = Stoichiometry(rdfID, stoichiometricCoefficient, physicalEntity)
-            biopax.addStoichiometry(newStoichiometry)
+            bioPax.addStoichiometry(newStoichiometry)
+    def addFragmentFeatures(self,bioPax,root,ns) :
+        features = root.findall("bp:FragmentFeature",ns)
+        for feature in features :
+            rdfID = feature.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            featureLocation = feature.find("bp:featureLocation",ns)
+
+            newFeature = FragmentFeature(rdfID,featureLocation)
+            bioPax.addFragmentFeature(newFeature)
+    def addModificationFeatures(self,bioPax,root,ns) :
+        """ Considered as FragmentFeatures """
+        modificationFeatures = root.findall("bp:ModificationFeature",ns)
+        for modification in modificationFeatures :
+            rdfID = modification.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            featureLocation = modification.find("bp:featureLocation",ns)
+            # add if necessary :
+            # modificationType = modification.find("bp:modificationType",ns)
+            # newFeature = ModificationFeature(rdfID,featureLocation,modificationType)
+
+            newFeature = FragmentFeature(rdfID,featureLocation)
+            bioPax.addFragmentFeature(newFeature)
+    def addSequenceIntervals(self,bioPax,root,ns) :
+        intervals = root.findall("bp:SequenceInterval",ns)
+        for sequenceInterval in intervals :
+            rdfID = sequenceInterval.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            sequenceIntervalBegin = sequenceInterval.find("bp:featureLocation",ns)
+            sequenceIntervalEnd = sequenceInterval.find("bp:featureLocation",ns)
+            # .get("{http://www.biopax.org/release/biopax-level3.owl#}resource")
+
+            newSequenceInterval = SequenceInterval(rdfID, sequenceIntervalBegin, sequenceIntervalEnd)
+            bioPax.addSequenceInterval(newSequenceInterval)
+    def addSequenceSites(self,bioPax,root,ns) :
+        sequenceSites = root.findall("bp:SequenceSite",ns)
+        
+        for sequenceSite in sequenceSites :
+            rdfID = sequenceSite.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID")
+            sequencePosition = sequenceSite.find("bp:sequencePosition",ns)
+            positionStatus = sequenceSite.find("bp:positionStatus",ns)
+
+            newSequenceSite = SequenceSite(rdfID,sequencePosition,positionStatus)
+            bioPax.addSequenceSite(newSequenceSite)
+    
+
